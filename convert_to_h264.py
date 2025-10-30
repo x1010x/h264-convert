@@ -5,6 +5,7 @@ import subprocess
 import json
 import shutil
 import argparse
+import multiprocessing
 from datetime import datetime
 from pathlib import Path
 
@@ -25,13 +26,26 @@ def save_progress(progress, progress_file):
     with open(progress_file, "w") as f:
         json.dump(progress, f, indent=2)
 
-def is_h264(file_path):
+def get_codec_info(file_path):
+    """Get video and audio codec information"""
     try:
-        cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", file_path]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        return result.stdout.strip() == "h264"
+        # Get video codec
+        v_cmd = ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", file_path]
+        v_result = subprocess.run(v_cmd, capture_output=True, text=True)
+        vcodec = v_result.stdout.strip() or "unknown"
+
+        # Get audio codec
+        a_cmd = ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", file_path]
+        a_result = subprocess.run(a_cmd, capture_output=True, text=True)
+        acodec = a_result.stdout.strip() or "unknown"
+
+        return vcodec, acodec
     except:
-        return False
+        return "unknown", "unknown"
+
+def is_h264(file_path):
+    vcodec, _ = get_codec_info(file_path)
+    return vcodec == "h264"
 
 def get_video_files(source_dir):
     extensions = [".avi", ".mkv", ".mp4", ".mov", ".wmv", ".flv", ".webm"]
@@ -41,19 +55,31 @@ def get_video_files(source_dir):
     return [str(f) for f in files if f.is_file()]
 
 def convert_file(input_path, output_path):
+    """Convert file using same logic as convert.sh"""
+    threads = multiprocessing.cpu_count()
+    vcodec, acodec = get_codec_info(input_path)
+
+    # Video conversion decision (same as convert.sh)
+    if vcodec == "h264":
+        vopts = ["-c:v", "copy"]
+    else:
+        vopts = ["-c:v", "libx264", "-preset", "medium", "-crf", "26", "-threads", str(threads)]
+
+    # Audio conversion decision (same as convert.sh)
+    if acodec == "aac":
+        aopts = ["-c:a", "copy"]
+    else:
+        aopts = ["-c:a", "aac", "-b:a", "128k"]
+
     cmd = [
-        "ffmpeg", "-i", input_path,
-        "-c:v", "libx264", "-crf", "18",
-        "-preset", "faster",
-        "-c:a", "copy", "-c:s", "copy",
-        "-map", "0", "-y", output_path
-    ]
+        "ffmpeg", "-hide_banner", "-stats", "-y", "-i", input_path
+    ] + vopts + aopts + ["-movflags", "+faststart", output_path]
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        return result.returncode == 0
+        return result.returncode == 0, vcodec, acodec
     except:
-        return False
+        return False, vcodec, acodec
 
 def get_video_info(file_path):
     try:
@@ -109,13 +135,15 @@ def main():
 
         log_message(f"[{index}/{total_files}] Processing: {file_name}", log_file)
 
-        codec, resolution = get_video_info(file_path)
+        vcodec, acodec = get_codec_info(file_path)
+        _, resolution = get_video_info(file_path)
         original_size = os.path.getsize(file_path)
-        log_message(f"  Detected: {codec} codec at {resolution}", log_file)
+        log_message(f"  Detected: {vcodec} video, {acodec} audio at {resolution}", log_file)
         log_message(f"  Original size: {format_size(original_size)}", log_file)
 
-        if is_h264(file_path):
-            log_message(f"  Already h264, skipping", log_file)
+        # Check if conversion needed (same logic as convert.sh)
+        if vcodec == "h264" and acodec == "aac":
+            log_message(f"  Already optimal (h264/aac), skipping", log_file)
             progress["completed"].append(file_path)
             save_progress(progress, progress_file)
             continue
@@ -130,10 +158,14 @@ def main():
             log_message(f"  Output exists, skipping: {output_name}", log_file)
             continue
 
-        log_message(f"  Converting {codec} -> h264/MP4 at {resolution}", log_file)
+        # Determine what needs converting
+        video_action = "copying" if vcodec == "h264" else "re-encoding to H.264"
+        audio_action = "copying" if acodec == "aac" else "converting to AAC"
+        log_message(f"  Video: {video_action}, Audio: {audio_action}", log_file)
         log_message(f"  Output: {output_path}", log_file)
 
-        if convert_file(file_path, output_path):
+        success, _, _ = convert_file(file_path, output_path)
+        if success:
             new_size = os.path.getsize(output_path)
             size_diff = new_size - original_size
             diff_percent = ((new_size - original_size) / original_size) * 100

@@ -1,18 +1,29 @@
 # h264-convert
-A python script to convert video files to h264/MP4 format for better media server compatibility.
+Video conversion scripts to optimize files for better media server compatibility with h264/MP4 format.
 
 ## Requirements
 
-- Python 3
+- Python 3 (for convert.py)
 - ffmpeg
+- bash (for convert.sh)
 
-## Usage
+## Scripts
+
+### convert.py - Advanced Python Script
+Full-featured conversion with progress tracking and archiving.
 
 ```bash
-python3 convert_to_h264.py --source SOURCE_DIR --destination DEST_DIR --archive ARCHIVE_DIR
+python3 convert.py --source SOURCE_DIR --destination DEST_DIR --archive ARCHIVE_DIR
 ```
 
-## Parameters
+### convert.sh - Simple Bash Script
+Lightweight conversion for current directory processing.
+
+```bash
+./convert.sh
+```
+
+## Parameters (convert.py)
 
 - `--source` or `-s`: Directory containing original video files
 - `--destination` or `-d`: Directory for converted MP4 files
@@ -20,19 +31,37 @@ python3 convert_to_h264.py --source SOURCE_DIR --destination DEST_DIR --archive 
 - `--log` or `-l`: Log file name (optional, default: conversion.log)
 - `--progress` or `-p`: Progress file name (optional, default: conversion_progress.json)
 
-## Example
+## Examples
 
+### Python Script
 ```bash
-python3 convert_to_h264.py -s /incoming/movies/ -d /media/movies/ -a /archive/
+python3 convert.py -s /incoming/movies/ -d /media/movies/ -a /archive/
+```
+
+### Bash Script
+```bash
+# Edit SRC_DIR and DEST_DIR in script, then run:
+./convert.sh
 ```
 
 ## Features
 
-- Scans source directory for video files
-- Skips files already in h264 format
-- Converts to h264 with CRF 18 quality
-- Preserves all audio and subtitle streams
-- Maintains original resolution
-- Moves original files to archive after successful conversion
-- Creates conversion log with timestamps
-- Resumes interrupted conversions
+### Both Scripts
+- Optimized h264 encoding (CRF 26, medium preset)
+- Smart codec detection (skips optimal files)
+- Converts non-AAC audio to 128k AAC
+- CPU thread optimization
+- Web-optimized MP4 output (faststart)
+
+### convert.py Additional Features
+- Progress tracking and resume capability
+- Detailed logging with timestamps
+- Automatic archiving of originals
+- File size comparison reporting
+- Recursive directory scanning
+- Multiple video format support
+
+### convert.sh Additional Features
+- Mirror directory structure in destination
+- Lightweight with minimal dependencies
+- Real-time processing feedback
