@@ -18,7 +18,7 @@ echo
 mkdir -p "$DEST_DIR"
 shopt -s globstar nullglob
 
-for file in "$SRC_DIR"/**/*.mkv; do
+for file in "$SRC_DIR"/**/*.{mkv,avi,mp4,mov,wmv,flv,webm,m4v,mpg,mpeg}; do
     [ -f "$file" ] || continue
 
     echo "Checking: $file"
