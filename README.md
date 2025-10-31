@@ -47,11 +47,12 @@ python3 convert.py -s /incoming/movies/ -d /media/movies/ -a /archive/
 ## Features
 
 ### Both Scripts
-- Optimized h264 encoding (CRF 26, medium preset)
+- High-quality h264 encoding (CRF 12, medium preset)
 - Smart codec detection (skips optimal files)
 - Converts non-AAC audio to 128k AAC
 - CPU thread optimization
 - Web-optimized MP4 output (faststart)
+- Maintains similar file sizes to originals with better quality
 
 ### convert.py Additional Features
 - Progress tracking and resume capability

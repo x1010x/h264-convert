@@ -63,7 +63,7 @@ def convert_file(input_path, output_path):
     if vcodec == "h264":
         vopts = ["-c:v", "copy"]
     else:
-        vopts = ["-c:v", "libx264", "-preset", "medium", "-crf", "26", "-threads", str(threads)]
+        vopts = ["-c:v", "libx264", "-preset", "medium", "-crf", "12", "-threads", str(threads)]
 
     # Audio conversion decision (same as convert.sh)
     if acodec == "aac":
