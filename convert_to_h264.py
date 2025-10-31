@@ -29,12 +29,10 @@ def save_progress(progress, progress_file):
 def get_codec_info(file_path):
     """Get video and audio codec information"""
     try:
-        # Get video codec
         v_cmd = ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", file_path]
         v_result = subprocess.run(v_cmd, capture_output=True, text=True)
         vcodec = v_result.stdout.strip() or "unknown"
 
-        # Get audio codec
         a_cmd = ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", file_path]
         a_result = subprocess.run(a_cmd, capture_output=True, text=True)
         acodec = a_result.stdout.strip() or "unknown"
@@ -55,17 +53,14 @@ def get_video_files(source_dir):
     return [str(f) for f in files if f.is_file()]
 
 def convert_file(input_path, output_path):
-    """Convert file using same logic as convert.sh"""
     threads = multiprocessing.cpu_count()
     vcodec, acodec = get_codec_info(input_path)
 
-    # Video conversion decision (same as convert.sh)
     if vcodec == "h264":
         vopts = ["-c:v", "copy"]
     else:
         vopts = ["-c:v", "libx264", "-preset", "medium", "-crf", "12", "-threads", str(threads)]
 
-    # Audio conversion decision (same as convert.sh)
     if acodec == "aac":
         aopts = ["-c:a", "copy"]
     else:
@@ -141,7 +136,6 @@ def main():
         log_message(f"  Detected: {vcodec} video, {acodec} audio at {resolution}", log_file)
         log_message(f"  Original size: {format_size(original_size)}", log_file)
 
-        # Check if conversion needed (same logic as convert.sh)
         if vcodec == "h264" and acodec == "aac":
             log_message(f"  Already optimal (h264/aac), skipping", log_file)
             progress["completed"].append(file_path)
@@ -158,7 +152,6 @@ def main():
             log_message(f"  Output exists, skipping: {output_name}", log_file)
             continue
 
-        # Determine what needs converting
         video_action = "copying" if vcodec == "h264" else "re-encoding to H.264"
         audio_action = "copying" if acodec == "aac" else "converting to AAC"
         log_message(f"  Video: {video_action}, Audio: {audio_action}", log_file)
